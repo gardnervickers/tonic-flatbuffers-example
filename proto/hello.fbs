@@ -1,0 +1,18 @@
+namespace HelloWorld.Greeter;
+
+
+enum Time:byte {
+    Morning = 0,
+    Afternoon = 1,
+    Evening = 2,
+}
+
+table GreetRequest {
+    name: string;
+}
+
+
+table GreetResponse {
+    time: Time;
+}
+
