@@ -1,18 +1,10 @@
-use codec::FlatbuffersMessage;
 use tonic::{transport::Server, Request, Response, Status};
-
-// The hello_generated module is generated using the flatbuffers compiler. You can find the command in the `gen.sh`
-// script at the project root.
-#[allow(dead_code, unused_imports)]
-#[path = "../proto/hello_generated.rs"]
-pub(crate) mod hello_generated;
-
-pub mod codec;
 
 pub mod hello_world {
     include!(concat!(env!("OUT_DIR"), "/json.helloworld.Greeter.rs"));
 }
 use hello_world::greeter_server::{Greeter, GreeterServer};
+use tonic_flatbuffers_example::common::{GreetRequestOwned, GreetResponseOwned};
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct MyGreeter {
@@ -23,9 +15,14 @@ pub struct MyGreeter {
 impl Greeter for MyGreeter {
     async fn say_hello(
         &self,
-        request: Request<FlatbuffersMessage>,
-    ) -> Result<Response<FlatbuffersMessage>, Status> {
-        todo!("do async stuff to respond to the request")
+        request: Request<GreetRequestOwned>,
+    ) -> Result<Response<GreetResponseOwned>, Status> {
+        let username = request.get_ref().name().unwrap();
+        println!("got request from user: {}", username);
+        return Ok(Response::new(GreetResponseOwned::new(format!(
+            "Hello, {}",
+            username
+        ))));
     }
 }
 

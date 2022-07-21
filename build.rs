@@ -7,9 +7,9 @@ fn main() {
             tonic_build::manual::Method::builder()
                 .name("say_hello")
                 .route_name("SayHello")
-                .input_type("crate::codec::FlatbuffersMessage")
-                .output_type("crate::codec::FlatbuffersMessage")
-                .codec_path("crate::codec::FlatbuffersCodec")
+                .input_type("tonic_flatbuffers_example::common::GreetRequestOwned")
+                .output_type("tonic_flatbuffers_example::common::GreetResponseOwned")
+                .codec_path("tonic_flatbuffers_example::codec::FlatbuffersCodec")
                 .build(),
         )
         .build();

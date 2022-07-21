@@ -25,97 +25,6 @@ pub mod greeter {
   extern crate flatbuffers;
   use self::flatbuffers::{EndianScalar, Follow};
 
-#[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
-pub const ENUM_MIN_TIME: i8 = 0;
-#[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
-pub const ENUM_MAX_TIME: i8 = 2;
-#[deprecated(since = "2.0.0", note = "Use associated constants instead. This will no longer be generated in 2021.")]
-#[allow(non_camel_case_types)]
-pub const ENUM_VALUES_TIME: [Time; 3] = [
-  Time::Morning,
-  Time::Afternoon,
-  Time::Evening,
-];
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-#[repr(transparent)]
-pub struct Time(pub i8);
-#[allow(non_upper_case_globals)]
-impl Time {
-  pub const Morning: Self = Self(0);
-  pub const Afternoon: Self = Self(1);
-  pub const Evening: Self = Self(2);
-
-  pub const ENUM_MIN: i8 = 0;
-  pub const ENUM_MAX: i8 = 2;
-  pub const ENUM_VALUES: &'static [Self] = &[
-    Self::Morning,
-    Self::Afternoon,
-    Self::Evening,
-  ];
-  /// Returns the variant's name or "" if unknown.
-  pub fn variant_name(self) -> Option<&'static str> {
-    match self {
-      Self::Morning => Some("Morning"),
-      Self::Afternoon => Some("Afternoon"),
-      Self::Evening => Some("Evening"),
-      _ => None,
-    }
-  }
-}
-impl core::fmt::Debug for Time {
-  fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-    if let Some(name) = self.variant_name() {
-      f.write_str(name)
-    } else {
-      f.write_fmt(format_args!("<UNKNOWN {:?}>", self.0))
-    }
-  }
-}
-impl<'a> flatbuffers::Follow<'a> for Time {
-  type Inner = Self;
-  #[inline]
-  fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
-    let b = unsafe {
-      flatbuffers::read_scalar_at::<i8>(buf, loc)
-    };
-    Self(b)
-  }
-}
-
-impl flatbuffers::Push for Time {
-    type Output = Time;
-    #[inline]
-    fn push(&self, dst: &mut [u8], _rest: &[u8]) {
-        unsafe { flatbuffers::emplace_scalar::<i8>(dst, self.0); }
-    }
-}
-
-impl flatbuffers::EndianScalar for Time {
-  #[inline]
-  fn to_little_endian(self) -> Self {
-    let b = i8::to_le(self.0);
-    Self(b)
-  }
-  #[inline]
-  #[allow(clippy::wrong_self_convention)]
-  fn from_little_endian(self) -> Self {
-    let b = i8::from_le(self.0);
-    Self(b)
-  }
-}
-
-impl<'a> flatbuffers::Verifiable for Time {
-  #[inline]
-  fn run_verifier(
-    v: &mut flatbuffers::Verifier, pos: usize
-  ) -> Result<(), flatbuffers::InvalidFlatbuffer> {
-    use self::flatbuffers::Verifiable;
-    i8::run_verifier(v, pos)
-  }
-}
-
-impl flatbuffers::SimpleToVerifyInSlice for Time {}
 pub enum GreetRequestOffset {}
 #[derive(Copy, Clone, PartialEq)]
 
@@ -226,7 +135,7 @@ impl<'a> flatbuffers::Follow<'a> for GreetResponse<'a> {
 }
 
 impl<'a> GreetResponse<'a> {
-  pub const VT_TIME: flatbuffers::VOffsetT = 4;
+  pub const VT_MESSAGE: flatbuffers::VOffsetT = 4;
 
   #[inline]
   pub fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
@@ -235,17 +144,17 @@ impl<'a> GreetResponse<'a> {
   #[allow(unused_mut)]
   pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr>(
     _fbb: &'mut_bldr mut flatbuffers::FlatBufferBuilder<'bldr>,
-    args: &'args GreetResponseArgs
+    args: &'args GreetResponseArgs<'args>
   ) -> flatbuffers::WIPOffset<GreetResponse<'bldr>> {
     let mut builder = GreetResponseBuilder::new(_fbb);
-    builder.add_time(args.time);
+    if let Some(x) = args.message { builder.add_message(x); }
     builder.finish()
   }
 
 
   #[inline]
-  pub fn time(&self) -> Time {
-    self._tab.get::<Time>(GreetResponse::VT_TIME, Some(Time::Morning)).unwrap()
+  pub fn message(&self) -> Option<&'a str> {
+    self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(GreetResponse::VT_MESSAGE, None)
   }
 }
 
@@ -256,19 +165,19 @@ impl flatbuffers::Verifiable for GreetResponse<'_> {
   ) -> Result<(), flatbuffers::InvalidFlatbuffer> {
     use self::flatbuffers::Verifiable;
     v.visit_table(pos)?
-     .visit_field::<Time>("time", Self::VT_TIME, false)?
+     .visit_field::<flatbuffers::ForwardsUOffset<&str>>("message", Self::VT_MESSAGE, false)?
      .finish();
     Ok(())
   }
 }
-pub struct GreetResponseArgs {
-    pub time: Time,
+pub struct GreetResponseArgs<'a> {
+    pub message: Option<flatbuffers::WIPOffset<&'a str>>,
 }
-impl<'a> Default for GreetResponseArgs {
+impl<'a> Default for GreetResponseArgs<'a> {
   #[inline]
   fn default() -> Self {
     GreetResponseArgs {
-      time: Time::Morning,
+      message: None,
     }
   }
 }
@@ -279,8 +188,8 @@ pub struct GreetResponseBuilder<'a: 'b, 'b> {
 }
 impl<'a: 'b, 'b> GreetResponseBuilder<'a, 'b> {
   #[inline]
-  pub fn add_time(&mut self, time: Time) {
-    self.fbb_.push_slot::<Time>(GreetResponse::VT_TIME, time, Time::Morning);
+  pub fn add_message(&mut self, message: flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(GreetResponse::VT_MESSAGE, message);
   }
   #[inline]
   pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>) -> GreetResponseBuilder<'a, 'b> {
@@ -300,9 +209,92 @@ impl<'a: 'b, 'b> GreetResponseBuilder<'a, 'b> {
 impl core::fmt::Debug for GreetResponse<'_> {
   fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
     let mut ds = f.debug_struct("GreetResponse");
-      ds.field("time", &self.time());
+      ds.field("message", &self.message());
       ds.finish()
   }
+}
+#[inline]
+#[deprecated(since="2.0.0", note="Deprecated in favor of `root_as...` methods.")]
+pub fn get_root_as_greet_response<'a>(buf: &'a [u8]) -> GreetResponse<'a> {
+  unsafe { flatbuffers::root_unchecked::<GreetResponse<'a>>(buf) }
+}
+
+#[inline]
+#[deprecated(since="2.0.0", note="Deprecated in favor of `root_as...` methods.")]
+pub fn get_size_prefixed_root_as_greet_response<'a>(buf: &'a [u8]) -> GreetResponse<'a> {
+  unsafe { flatbuffers::size_prefixed_root_unchecked::<GreetResponse<'a>>(buf) }
+}
+
+#[inline]
+/// Verifies that a buffer of bytes contains a `GreetResponse`
+/// and returns it.
+/// Note that verification is still experimental and may not
+/// catch every error, or be maximally performant. For the
+/// previous, unchecked, behavior use
+/// `root_as_greet_response_unchecked`.
+pub fn root_as_greet_response(buf: &[u8]) -> Result<GreetResponse, flatbuffers::InvalidFlatbuffer> {
+  flatbuffers::root::<GreetResponse>(buf)
+}
+#[inline]
+/// Verifies that a buffer of bytes contains a size prefixed
+/// `GreetResponse` and returns it.
+/// Note that verification is still experimental and may not
+/// catch every error, or be maximally performant. For the
+/// previous, unchecked, behavior use
+/// `size_prefixed_root_as_greet_response_unchecked`.
+pub fn size_prefixed_root_as_greet_response(buf: &[u8]) -> Result<GreetResponse, flatbuffers::InvalidFlatbuffer> {
+  flatbuffers::size_prefixed_root::<GreetResponse>(buf)
+}
+#[inline]
+/// Verifies, with the given options, that a buffer of bytes
+/// contains a `GreetResponse` and returns it.
+/// Note that verification is still experimental and may not
+/// catch every error, or be maximally performant. For the
+/// previous, unchecked, behavior use
+/// `root_as_greet_response_unchecked`.
+pub fn root_as_greet_response_with_opts<'b, 'o>(
+  opts: &'o flatbuffers::VerifierOptions,
+  buf: &'b [u8],
+) -> Result<GreetResponse<'b>, flatbuffers::InvalidFlatbuffer> {
+  flatbuffers::root_with_opts::<GreetResponse<'b>>(opts, buf)
+}
+#[inline]
+/// Verifies, with the given verifier options, that a buffer of
+/// bytes contains a size prefixed `GreetResponse` and returns
+/// it. Note that verification is still experimental and may not
+/// catch every error, or be maximally performant. For the
+/// previous, unchecked, behavior use
+/// `root_as_greet_response_unchecked`.
+pub fn size_prefixed_root_as_greet_response_with_opts<'b, 'o>(
+  opts: &'o flatbuffers::VerifierOptions,
+  buf: &'b [u8],
+) -> Result<GreetResponse<'b>, flatbuffers::InvalidFlatbuffer> {
+  flatbuffers::size_prefixed_root_with_opts::<GreetResponse<'b>>(opts, buf)
+}
+#[inline]
+/// Assumes, without verification, that a buffer of bytes contains a GreetResponse and returns it.
+/// # Safety
+/// Callers must trust the given bytes do indeed contain a valid `GreetResponse`.
+pub unsafe fn root_as_greet_response_unchecked(buf: &[u8]) -> GreetResponse {
+  flatbuffers::root_unchecked::<GreetResponse>(buf)
+}
+#[inline]
+/// Assumes, without verification, that a buffer of bytes contains a size prefixed GreetResponse and returns it.
+/// # Safety
+/// Callers must trust the given bytes do indeed contain a valid size prefixed `GreetResponse`.
+pub unsafe fn size_prefixed_root_as_greet_response_unchecked(buf: &[u8]) -> GreetResponse {
+  flatbuffers::size_prefixed_root_unchecked::<GreetResponse>(buf)
+}
+#[inline]
+pub fn finish_greet_response_buffer<'a, 'b>(
+    fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>,
+    root: flatbuffers::WIPOffset<GreetResponse<'a>>) {
+  fbb.finish(root, None);
+}
+
+#[inline]
+pub fn finish_size_prefixed_greet_response_buffer<'a, 'b>(fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>, root: flatbuffers::WIPOffset<GreetResponse<'a>>) {
+  fbb.finish_size_prefixed(root, None);
 }
 }  // pub mod Greeter
 }  // pub mod HelloWorld

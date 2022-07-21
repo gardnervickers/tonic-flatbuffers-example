@@ -3,16 +3,14 @@ name = "tonic-flatbuffers-example"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 
 [[bin]] # Bin to run the HelloWorld gRPC server
 name = "helloworld-server"
-path = "src/server.rs"
+path = "src/bin/server.rs"
 
 [[bin]] # Bin to run the HelloWorld gRPC client
 name = "helloworld-client"
-path = "src/client.rs"
+path = "src/bin/client.rs"
 
 [dependencies]
 tonic = {git = "https://github.com/hyperium/tonic", branch = "master"}

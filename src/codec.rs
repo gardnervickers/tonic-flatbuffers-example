@@ -1,13 +1,11 @@
-use bytes::{Buf, BufMut, Bytes};
+use bytes::{Buf, BufMut};
 use std::marker::PhantomData;
 use tonic::{
     codec::{Codec, DecodeBuf, Decoder, EncodeBuf, Encoder},
     Status,
 };
 
-use crate::hello_generated::hello_world::greeter::{
-    GreetRequest, GreetResponse, GreetResponseArgs, Time,
-};
+use crate::common::FlatbufferOwned;
 
 /// Flatbuffers encoder for transmitting the binary representation of a flatbuffer over GRPC.
 #[derive(Debug, Clone, Copy, Default)]
@@ -17,24 +15,11 @@ pub struct FlatbuffersEncoder<T>(PhantomData<T>);
 #[derive(Debug, Clone, Copy, Default)]
 pub struct FlatbuffersDecoder<T>(PhantomData<T>);
 
-/// [FlatbuffersMessage] contains the buffer for a flatbuffer.
-///
-/// The buffer is guaranteed to be validated.
-pub struct FlatbuffersMessage {
-    buf: Bytes,
-}
-
-impl<'this> FlatbuffersMessage {
-    fn follow<T>(&'this self) -> T::Inner
-    where
-        T: flatbuffers::Follow<'this> + flatbuffers::Verifiable,
-    {
-        T::follow(&self.buf[..], 0)
-    }
-}
-
-impl Decoder for FlatbuffersDecoder<FlatbuffersMessage> {
-    type Item = FlatbuffersMessage;
+impl<M> Decoder for FlatbuffersDecoder<M>
+where
+    M: FlatbufferOwned,
+{
+    type Item = M;
 
     type Error = Status;
 
@@ -42,42 +27,54 @@ impl Decoder for FlatbuffersDecoder<FlatbuffersMessage> {
         if !buf.has_remaining() {
             return Ok(None);
         }
-        // Copy will just bump the refcnt
-        let copied = buf.copy_to_bytes(buf.remaining());
-        // TODO: run fbs validator
-        Ok(Some(FlatbuffersMessage { buf: copied }))
+        let msg = M::from_buf(buf);
+        Ok(Some(msg))
     }
 }
 
-impl Encoder for FlatbuffersEncoder<FlatbuffersMessage> {
-    type Item = FlatbuffersMessage;
+impl<M> Encoder for FlatbuffersEncoder<M>
+where
+    M: FlatbufferOwned,
+{
+    type Item = M;
 
     type Error = Status;
 
     fn encode(&mut self, item: Self::Item, dst: &mut EncodeBuf<'_>) -> Result<(), Self::Error> {
-        dst.put(item.buf);
+        let slice = item.as_slice();
+        dst.put(slice);
         Ok(())
     }
 }
 
-#[derive(Debug, Clone, Copy, Default)]
-pub struct FlatbuffersCodec();
+#[derive(Debug, Clone, Copy)]
+pub struct FlatbuffersCodec<T, U>(PhantomData<(T, U)>);
 
-impl Codec for FlatbuffersCodec {
-    type Encode = FlatbuffersMessage;
+impl<T, U> Default for FlatbuffersCodec<T, U> {
+    fn default() -> Self {
+        Self(Default::default())
+    }
+}
 
-    type Decode = FlatbuffersMessage;
+impl<T, U> Codec for FlatbuffersCodec<T, U>
+where
+    T: FlatbufferOwned + Send + 'static,
+    U: FlatbufferOwned + Send + 'static,
+{
+    type Encode = T;
 
-    type Encoder = FlatbuffersEncoder<FlatbuffersMessage>;
+    type Decode = U;
 
-    type Decoder = FlatbuffersDecoder<FlatbuffersMessage>;
+    type Encoder = FlatbuffersEncoder<T>;
+
+    type Decoder = FlatbuffersDecoder<U>;
 
     fn encoder(&mut self) -> Self::Encoder {
-        todo!()
+        FlatbuffersEncoder(PhantomData)
     }
 
     fn decoder(&mut self) -> Self::Decoder {
-        todo!()
+        FlatbuffersDecoder(PhantomData)
     }
 }
 
