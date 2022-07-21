@@ -8,4 +8,3 @@ table GreetResponse {
     message: string;
 }
 
-root_type GreetResponse;
